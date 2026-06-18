@@ -120,6 +120,7 @@ export interface OutfitItemRef {
   name: string;
   category: Category;
   color: string;
+  imageThumb?: string;
 }
 
 export interface OutfitHistory {

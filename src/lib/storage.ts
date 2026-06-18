@@ -108,8 +108,8 @@ export const defaultSettings: Settings = {
   recommendPreference: 'safe',
 };
 
-export const loadSettings = (): Settings => {
-  const raw = safeParse<Partial<Settings>>(localStorage.getItem(SETTINGS_KEY), {});
+export const normalizeSettings = (value: unknown): Settings => {
+  const raw = (value && typeof value === 'object' ? value : {}) as Partial<Settings>;
   return {
     coldTolerance: inEnum(raw.coldTolerance, coldToleranceValues) ? raw.coldTolerance : 'normal',
     stylePreference: Array.isArray(raw.stylePreference)
@@ -118,6 +118,9 @@ export const loadSettings = (): Settings => {
     recommendPreference: inEnum(raw.recommendPreference, recommendPreferenceValues) ? raw.recommendPreference : 'safe',
   };
 };
+
+export const loadSettings = (): Settings =>
+  normalizeSettings(safeParse<Partial<Settings>>(localStorage.getItem(SETTINGS_KEY), {}));
 
 export const saveSettings = (settings: Settings) => localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 
@@ -332,6 +335,7 @@ const normalizeItemRef = (ref: unknown): OutfitItemRef | null => {
     name: name || '单品',
     category: inEnum(r.category, categoryValues) ? r.category : 'top',
     color: typeof r.color === 'string' && r.color ? r.color : 'white',
+    imageThumb: clampString(r.imageThumb),
   };
 };
 

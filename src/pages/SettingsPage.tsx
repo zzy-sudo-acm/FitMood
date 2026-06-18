@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Moon, RotateCcw, Trash2, Wrench } from 'lucide-react';
+import { Download, Moon, RotateCcw, Trash2, Upload, Wrench } from 'lucide-react';
 import { ChipMultiSelect, Segmented } from '../components/inputs';
 import {
   coldToleranceLabels,
@@ -10,7 +10,8 @@ import {
   styleTagOptions,
 } from '../lib/clothingOptions';
 import { ThemeMode } from '../lib/storage';
-import { ColdTolerance, RecommendPreference, Settings, StyleTag } from '../types';
+import { exportBackup, FitMoodBackup, downloadBackup, parseBackupFile } from '../lib/backup';
+import { ClothingItem, ColdTolerance, OutfitHistory, RecommendPreference, Settings, StyleTag } from '../types';
 import { APP_VERSION } from '../lib/version';
 
 interface SettingsPageProps {
@@ -23,6 +24,9 @@ interface SettingsPageProps {
   onResetWardrobe: () => void | Promise<void>;
   onClearWardrobe: () => void | Promise<void>;
   onClearHistory: () => void;
+  clothes: ClothingItem[];
+  history: OutfitHistory[];
+  onImportBackup: (backup: FitMoodBackup) => void;
 }
 
 export function SettingsPage({
@@ -35,8 +39,12 @@ export function SettingsPage({
   onResetWardrobe,
   onClearWardrobe,
   onClearHistory,
+  clothes,
+  history,
+  onImportBackup,
 }: SettingsPageProps) {
   const [message, setMessage] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
   const notify = (text: string) => setMessage(text);
 
@@ -56,6 +64,28 @@ export function SettingsPage({
     if (!window.confirm('清空穿搭历史？记录和反馈都会被抹掉，无法撤销。')) return;
     onClearHistory();
     notify('穿搭历史已清空。');
+  };
+
+  const exportData = () => {
+    const backup = exportBackup(clothes, history, settings);
+    downloadBackup(backup);
+    notify('备份已下载。它包含衣橱、历史、设置和缩略图。');
+  };
+
+  const importData = async (file: File | undefined) => {
+    if (!file) return;
+    if (!window.confirm('导入备份会替换当前衣橱、历史和设置。继续吗？')) return;
+    setIsImporting(true);
+    const result = await parseBackupFile(file);
+    setIsImporting(false);
+
+    if (!result.ok) {
+      notify(`导入失败：${result.error}`);
+      return;
+    }
+
+    onImportBackup(result.backup);
+    notify('导入成功，衣橱、历史和设置已恢复。');
   };
 
   return (
@@ -153,6 +183,24 @@ export function SettingsPage({
         <div className="section-title-row">
           <h2>数据管理</h2>
         </div>
+        <button type="button" className="settings-button" onClick={exportData}>
+          <Download size={17} />
+          导出备份
+        </button>
+        <label className={`settings-button settings-button--file ${isImporting ? 'is-disabled' : ''}`}>
+          <Upload size={17} />
+          {isImporting ? '导入中…' : '导入备份'}
+          <input
+            type="file"
+            accept="application/json,.json"
+            disabled={isImporting}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = '';
+              void importData(file);
+            }}
+          />
+        </label>
         <button type="button" className="settings-button" onClick={resetWardrobe}>
           <RotateCcw size={17} />
           恢复默认衣橱

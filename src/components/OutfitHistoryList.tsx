@@ -41,7 +41,9 @@ export function OutfitHistoryList({ history, onSetFeedback }: OutfitHistoryListP
             <div className="history-outfit">
               {entry.items.map((item) => (
                 <span className="history-chip" key={item.id}>
-                  <span className="history-chip__dot" style={{ background: colorHex(item.color) }} aria-hidden="true" />
+                  <span className={`history-chip__dot ${item.imageThumb ? 'has-image' : ''}`} style={{ background: colorHex(item.color) }} aria-hidden="true">
+                    {item.imageThumb && <img src={item.imageThumb} alt="" />}
+                  </span>
                   {item.name}
                 </span>
               ))}

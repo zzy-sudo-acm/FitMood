@@ -361,4 +361,20 @@ describe('第七步：localStorage 归一化', () => {
     expect(normalizeHistory('x')).toEqual([]);
     expect(normalizeHistory({})).toEqual([]);
   });
+
+  it('OutfitItemRef 能保存 imageThumb，旧历史没有 imageThumb 也能 normalize', () => {
+    const out = normalizeHistory([
+      {
+        items: [{ id: 'with-thumb', name: '白T', category: 'top', color: 'white', imageThumb: 'data:image/webp;base64,abc' }],
+        input: null,
+      },
+      {
+        items: [{ id: 'old', name: '旧鞋', category: 'shoes', color: 'black' }],
+        input: null,
+      },
+    ]);
+
+    expect(out[0].items[0].imageThumb).toBe('data:image/webp;base64,abc');
+    expect(out[1].items[0].imageThumb).toBeUndefined();
+  });
 });

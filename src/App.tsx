@@ -25,6 +25,7 @@ import {
   ThemeMode,
 } from './lib/storage';
 import { deleteClothingImage } from './lib/imageStore';
+import { FitMoodBackup } from './lib/backup';
 import { ClothingItem, Feedback, OutfitHistory, OutfitInput, OutfitItemRef, Settings, TabKey } from './types';
 
 const THEME_COLORS: Record<ThemeMode, string> = { day: '#f7efe7', night: '#211b22' };
@@ -94,7 +95,13 @@ export default function App() {
     persistClothes(clothes.map((c) => (c.id === item.id ? { ...c, isClean: !c.isClean, updatedAt: Date.now() } : c)));
 
   const wearOutfit = (items: ClothingItem[], input: OutfitInput, feedback?: Feedback) => {
-    const refs: OutfitItemRef[] = items.map((i) => ({ id: i.id, name: i.name, category: i.category, color: i.color }));
+    const refs: OutfitItemRef[] = items.map((i) => ({
+      id: i.id,
+      name: i.name,
+      category: i.category,
+      color: i.color,
+      imageThumb: i.imageThumb,
+    }));
     const entry: OutfitHistory = { id: makeId('outfit'), items: refs, input, feedback, createdAt: Date.now() };
     setHistory(addHistory(entry));
     persistClothes(markWorn(clothes, items.map((i) => i.id)));
@@ -119,6 +126,14 @@ export default function App() {
   const handleClearHistory = () => {
     clearHistory();
     setHistory([]);
+  };
+
+  const handleImportBackup = (backup: FitMoodBackup) => {
+    persistClothes(backup.clothes);
+    setHistory(backup.history);
+    saveHistory(backup.history);
+    setSettings(backup.settings);
+    saveSettings(backup.settings);
   };
 
   return (
@@ -154,6 +169,9 @@ export default function App() {
             onResetWardrobe={handleResetWardrobe}
             onClearWardrobe={handleClearWardrobe}
             onClearHistory={handleClearHistory}
+            clothes={clothes}
+            history={history}
+            onImportBackup={handleImportBackup}
           />
         )}
       </main>

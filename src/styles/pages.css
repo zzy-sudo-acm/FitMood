@@ -1,0 +1,279 @@
+/* 页面：今日推荐、衣橱、穿搭历史、设置 */
+
+/* ---- 搜索 / 筛选 ---- */
+.search-row {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.search-row svg {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  transform: translateY(-50%);
+  color: var(--text-mute);
+  pointer-events: none;
+}
+
+.search-input {
+  min-height: 44px;
+  padding: 0 14px 0 38px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+/* ---- 空状态 ---- */
+.empty-state {
+  padding: 22px 18px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 18px;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  font-size: 14px;
+  line-height: 1.65;
+  text-align: center;
+}
+
+.empty-state .empty-emoji {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 30px;
+}
+
+.empty-state b {
+  color: var(--text);
+}
+
+.empty-state--card {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 30px 22px;
+  border-style: solid;
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.empty-state--card svg {
+  color: var(--mint-deep);
+}
+
+.empty-state--card .ghost-button {
+  margin-top: 6px;
+}
+
+/* ---- 历史 ---- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.stat-card {
+  min-height: 92px;
+  padding: 13px 11px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.stat-card svg {
+  color: var(--mint-deep);
+  margin-bottom: 8px;
+}
+
+.stat-card span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-mute);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.stat-card b {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.history-list {
+  display: grid;
+  gap: 11px;
+}
+
+.history-item {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.history-item__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.history-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-mute);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.history-skip {
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: var(--text-mute);
+  background: var(--surface-sunken);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.history-outfit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 9px;
+}
+
+.history-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px 5px 8px;
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.history-chip__dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.history-cond {
+  margin: 0 0 10px;
+  color: var(--text-mute);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.history-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+/* ---- 设置 ---- */
+.settings-section {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-section .field-hint {
+  margin-top: 0;
+}
+
+.settings-button {
+  min-height: 50px;
+  padding: 0 14px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-weight: 800;
+  justify-content: flex-start;
+}
+
+.settings-button svg {
+  color: var(--mint-deep);
+}
+
+.settings-button.danger {
+  color: var(--tomato);
+  background: var(--tomato-soft);
+  border-color: transparent;
+}
+
+.settings-button.danger svg {
+  color: var(--tomato);
+}
+
+.theme-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.theme-toggle-row .theme-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.theme-toggle-row .theme-copy b {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.theme-toggle-row .theme-copy small {
+  color: var(--text-mute);
+  font-size: 12px;
+}
+
+.bare-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-mute);
+  cursor: pointer;
+}
+
+.bare-switch.is-on {
+  color: var(--mint-deep);
+}
+
+.bare-switch.is-on .switch-track {
+  background: var(--mint);
+}
+
+.bare-switch.is-on .switch-track::after {
+  transform: translateX(16px);
+}
+
+.version-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--mint-on);
+  background: var(--mint);
+  font-weight: 800;
+  text-align: center;
+}

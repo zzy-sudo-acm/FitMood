@@ -1,0 +1,107 @@
+/* FitMood 主题变量
+   日间「奶油柔光」：奶油底 + 莫兰迪玫粉 + 雾蓝 + 暖杏
+   夜间「柔和暗调」：暖紫灰底，配色保持柔和不刺眼
+   变量名沿用基础样式，改值即换肤。 */
+:root {
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  /* ---- 背景 ---- */
+  --bg-base: #f7efe6;
+  --bg-grad-1: #fdf8f2;
+  --bg-grad-2: #f7efe6;
+  --bg-grad-3: #f1e6d9;
+  --shell-tint-1: rgba(209, 143, 166, 0.12);
+  --shell-tint-2: rgba(143, 176, 201, 0.12);
+
+  /* ---- 卡片 / 描边 / 阴影 ---- */
+  --surface: #fffaf4;
+  --surface-2: #f6ece1;
+  --surface-sunken: #efe3d4;
+  --border: rgba(120, 92, 84, 0.12);
+  --border-strong: rgba(120, 92, 84, 0.2);
+  --shadow-card: 0 8px 22px rgba(184, 142, 152, 0.16);
+  --shadow-soft: 0 3px 12px rgba(184, 142, 152, 0.1);
+  --shadow-pop: 0 16px 38px rgba(184, 142, 152, 0.22);
+
+  /* ---- 文字 ---- */
+  --text: #4b4039;
+  --text-soft: #8a7a70;
+  --text-mute: #b3a499;
+
+  /* ---- 主强调：莫兰迪玫粉 ---- */
+  --mint: #d18fa6;
+  --mint-deep: #b06585;
+  --mint-soft: rgba(209, 143, 166, 0.16);
+  --mint-on: #ffffff;
+
+  /* ---- 暖杏（提示 / 风险底）---- */
+  --cheese: #e3b083;
+  --cheese-soft: rgba(227, 176, 131, 0.2);
+
+  /* ---- muted coral（警示 / 删除）---- */
+  --tomato: #d4836f;
+  --tomato-soft: rgba(212, 131, 111, 0.16);
+
+  /* ---- 雾蓝（次强调 / 备选）---- */
+  --rose: #8fb0c9;
+  --rose-soft: rgba(143, 176, 201, 0.18);
+
+  --on-accent: #ffffff;
+
+  --tab-bg: rgba(255, 250, 244, 0.92);
+  --action-fade: rgba(247, 239, 230, 0);
+  --action-solid: var(--bg-base);
+  --loading-shimmer: rgba(255, 255, 255, 0.5);
+
+  color: var(--text);
+  background: var(--bg-base);
+}
+
+[data-theme="night"] {
+  --bg-base: #211b22;
+  --bg-grad-1: #2b2330;
+  --bg-grad-2: #1f1922;
+  --bg-grad-3: #181319;
+  --shell-tint-1: rgba(209, 143, 166, 0.09);
+  --shell-tint-2: rgba(143, 176, 201, 0.07);
+
+  --surface: #2b2430;
+  --surface-2: #332b39;
+  --surface-sunken: #241e29;
+  --border: rgba(255, 240, 245, 0.1);
+  --border-strong: rgba(255, 240, 245, 0.18);
+  --shadow-card: 0 10px 26px rgba(0, 0, 0, 0.42);
+  --shadow-soft: 0 3px 12px rgba(0, 0, 0, 0.34);
+  --shadow-pop: 0 18px 44px rgba(0, 0, 0, 0.52);
+
+  --text: #f1e7ee;
+  --text-soft: #c6b6c2;
+  --text-mute: #8d8090;
+
+  --mint: #d99bb0;
+  --mint-deep: #ecbacb;
+  --mint-soft: rgba(217, 155, 176, 0.18);
+  --mint-on: #2a1622;
+
+  --cheese: #e3b083;
+  --cheese-soft: rgba(227, 176, 131, 0.16);
+
+  --tomato: #e09a86;
+  --tomato-soft: rgba(224, 154, 134, 0.16);
+
+  --rose: #9db9d0;
+  --rose-soft: rgba(157, 185, 208, 0.16);
+
+  --on-accent: #2a1622;
+
+  --tab-bg: rgba(33, 27, 34, 0.92);
+  --action-fade: rgba(33, 27, 34, 0);
+  --action-solid: var(--bg-base);
+  --loading-shimmer: rgba(255, 255, 255, 0.08);
+
+  color: var(--text);
+  background: var(--bg-base);
+}

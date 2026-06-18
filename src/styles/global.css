@@ -1,0 +1,5 @@
+/* FitMood 样式入口：按职责拆分，顺序即层叠顺序，勿随意调换。 */
+@import './tokens.css';
+@import './base.css';
+@import './components.css';
+@import './pages.css';

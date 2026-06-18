@@ -1,4 +1,4 @@
-import { ClothingItem } from '../types';
+import { ClothingItem, ColorProfile, Fit, GarmentLength, Material, Pattern, Rating } from '../types';
 
 // 第一次打开就有衣服可搭：覆盖上装/下装/连衣裙/外套/鞋/包/配饰，
 // 能跑出上课、通勤、约会、面试、拍照、运动等多套搭配。
@@ -6,7 +6,80 @@ const base = 1730000000000;
 let n = 0;
 const t = () => base + n++ * 1000;
 
-export const defaultClothing: ClothingItem[] = [
+type AestheticFields = Pick<ClothingItem, 'pattern' | 'material' | 'fit' | 'length' | 'thickness' | 'colorProfile'>;
+type DefaultItem = Omit<ClothingItem, keyof AestheticFields | 'imageId' | 'imageThumb' | 'imageAlt'> &
+  Partial<AestheticFields>;
+
+const profileFor = (color: string): ColorProfile => {
+  const neutral = ['white', 'black', 'gray', 'beige', 'brown', 'denim', 'navy', 'khaki'].includes(color);
+  const cool = ['denim', 'navy', 'green', 'mint', 'skyblue', 'blue'].includes(color);
+  const warm = ['beige', 'brown', 'pink', 'rose', 'red', 'coral', 'yellow'].includes(color);
+  const brightness: Record<string, Rating> = {
+    white: 5,
+    beige: 4,
+    gray: 3,
+    denim: 3,
+    brown: 2,
+    black: 1,
+    multi: 4,
+  };
+  const saturation: Record<string, Rating> = {
+    white: 1,
+    black: 1,
+    gray: 1,
+    beige: 1,
+    brown: 2,
+    denim: 2,
+    multi: 5,
+  };
+  return {
+    mainColor: color,
+    secondaryColors: color === 'multi' ? ['pink', 'green', 'white'] : [],
+    neutralLevel: (neutral ? 5 : color === 'multi' ? 1 : 2) as Rating,
+    brightness: brightness[color] ?? 3,
+    saturation: saturation[color] ?? 3,
+    temperature: neutral ? 'neutral' : cool ? 'cool' : warm ? 'warm' : 'neutral',
+  };
+};
+
+const materialFor = (item: DefaultItem): Material => {
+  if (item.name.includes('牛仔')) return 'denim';
+  if (item.name.includes('针织') || item.name.includes('开衫') || item.name.includes('卫衣')) return 'knit';
+  if (item.name.includes('大衣')) return 'wool';
+  if (item.name.includes('碎花')) return 'chiffon';
+  if (item.category === 'shoes' || item.category === 'bag') return 'leather';
+  if (item.category === 'accessory') return 'other';
+  return 'cotton';
+};
+
+const fitFor = (item: DefaultItem): Fit => {
+  if (item.name.includes('卫衣') || item.name.includes('大衣')) return 'loose';
+  if (item.tags.includes('slimming')) return 'slim';
+  return 'regular';
+};
+
+const lengthFor = (item: DefaultItem): GarmentLength => {
+  if (item.name.includes('大衣') || item.tags.includes('longHem')) return 'long';
+  if (item.name.includes('短款')) return 'cropped';
+  return 'regular';
+};
+
+const patternFor = (item: DefaultItem): Pattern => {
+  if (item.color === 'multi') return 'floral';
+  return 'solid';
+};
+
+const complete = (item: DefaultItem): ClothingItem => ({
+  pattern: patternFor(item),
+  material: materialFor(item),
+  fit: fitFor(item),
+  length: lengthFor(item),
+  thickness: item.warmth,
+  colorProfile: profileFor(item.color),
+  ...item,
+});
+
+const rawDefaultClothing: DefaultItem[] = [
   {
     id: 'cloth-white-tee',
     name: '白色短袖',
@@ -263,3 +336,5 @@ export const defaultClothing: ClothingItem[] = [
     updatedAt: t(),
   },
 ];
+
+export const defaultClothing: ClothingItem[] = rawDefaultClothing.map(complete);

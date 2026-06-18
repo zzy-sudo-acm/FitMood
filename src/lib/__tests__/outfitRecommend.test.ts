@@ -3,10 +3,12 @@ import { recommendOutfit } from '../outfitRecommend';
 import { defaultClothing } from '../../data/defaultClothing';
 import { largeAreaColors, patternCount, warmthIndex } from '../outfitRules';
 import { ClothingItem, OutfitHistory, OutfitInput, Settings } from '../../types';
-import { normalizeHistory } from '../storage';
+import { normalizeClothing, normalizeHistory } from '../storage';
+import { evaluateColorHarmony } from '../colorTheory';
+import { evaluateSilhouette } from '../silhouetteRules';
 
 let idc = 0;
-const make = (over: Partial<ClothingItem> = {}): ClothingItem => ({
+const make = (over: Partial<ClothingItem> = {}): ClothingItem => normalizeClothing({
   id: `id-${idc++}`,
   name: 'item',
   category: 'top',
@@ -159,6 +161,23 @@ describe('outfitRules 纯函数', () => {
 
 
 describe('第三步：避免明显不合理的搭配', () => {
+  it('面试场合不会推荐低正式鞋 + 花纹裙的组合', () => {
+    const wardrobe = [
+      make({ id: 'shirt', category: 'top', name: '白衬衫', color: 'white', styleTags: ['commute'], formality: 5 }),
+      make({ id: 'skirt', category: 'bottom', name: '黑色半裙', color: 'black', styleTags: ['commute'], formality: 4 }),
+      make({ id: 'floral', category: 'dress', name: '碎花裙', color: 'multi', pattern: 'floral', formality: 4 }),
+      make({ id: 'casual-shoe', category: 'shoes', name: '休闲鞋', formality: 1 }),
+      make({ id: 'formal-shoe', category: 'shoes', name: '乐福鞋', color: 'black', styleTags: ['commute'], formality: 4 }),
+    ];
+    const r = recommendOutfit(wardrobe, [], input({ occasion: 'interview' }), settings);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const ids = r.recommendation.items.map((item) => item.id);
+      expect(ids).not.toContain('floral');
+      expect(ids).not.toContain('casual-shoe');
+    }
+  });
+
   it('热天不推荐厚外套', () => {
     const wardrobe = [
       make({ category: 'top', warmth: 2 }),
@@ -169,6 +188,58 @@ describe('第三步：避免明显不合理的搭配', () => {
     const r = recommendOutfit(wardrobe, [], input({ tempFeel: 'hot', weather: 'sunny' }), settings);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.recommendation.items.some((i) => i.id === 'coat')).toBe(false);
+  });
+});
+
+describe('v0.3 审美规则引擎', () => {
+  it('高饱和颜色过多会扣分', () => {
+    const calm = [
+      make({ category: 'top', color: 'white' }),
+      make({ category: 'bottom', color: 'denim' }),
+      make({ category: 'outerwear', color: 'beige' }),
+    ];
+    const loud = [
+      make({ category: 'top', color: 'red' }),
+      make({ category: 'bottom', color: 'yellow' }),
+      make({ category: 'outerwear', color: 'blue' }),
+    ];
+    expect(evaluateColorHarmony(loud, input()).score).toBeLessThan(evaluateColorHarmony(calm, input()).score);
+    expect(evaluateColorHarmony(loud, input()).warnings.join('')).toContain('高饱和');
+  });
+
+  it('同色系或中性色平衡会加分', () => {
+    const outfit = [
+      make({ category: 'top', color: 'white' }),
+      make({ category: 'bottom', color: 'beige' }),
+      make({ category: 'outerwear', color: 'brown' }),
+    ];
+    const result = evaluateColorHarmony(outfit, input());
+    expect(result.score).toBeGreaterThan(10);
+    expect(result.reasons.join('')).toContain('中性');
+  });
+
+  it('上短下长会加分', () => {
+    const result = evaluateSilhouette(
+      [
+        make({ category: 'top', length: 'cropped' }),
+        make({ category: 'bottom', length: 'long', fit: 'regular' }),
+      ],
+      input()
+    );
+    expect(result.score).toBeGreaterThan(0);
+    expect(result.reasons.join('')).toContain('视觉重心');
+  });
+
+  it('宽松上衣 + 宽松下装且没有腰线会扣分', () => {
+    const result = evaluateSilhouette(
+      [
+        make({ category: 'top', fit: 'loose', length: 'regular', tags: [] }),
+        make({ category: 'bottom', fit: 'loose', length: 'regular', tags: [] }),
+      ],
+      input()
+    );
+    expect(result.score).toBeLessThan(0);
+    expect(result.warnings.join('')).toContain('没有明显腰线');
   });
 });
 
@@ -216,6 +287,43 @@ describe('第六步：历史反馈影响后续推荐', () => {
 });
 
 describe('第七步：localStorage 归一化', () => {
+  it('旧 ClothingItem 数据能 normalize 成新结构', () => {
+    const oldItem = normalizeClothing({
+      id: 'old',
+      name: '旧白T',
+      category: 'top',
+      color: 'white',
+      styleTags: ['minimal'],
+      warmth: 2,
+      comfort: 4,
+      formality: 2,
+      versatility: 5,
+      suitableSeasons: ['summer'],
+      suitableOccasions: ['casual'],
+      isClean: true,
+      tags: [],
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    expect(oldItem.pattern).toBe('solid');
+    expect(oldItem.material).toBeTruthy();
+    expect(oldItem.fit).toBeTruthy();
+    expect(oldItem.length).toBeTruthy();
+    expect(oldItem.thickness).toBe(2);
+    expect(oldItem.colorProfile.mainColor).toBe('white');
+  });
+
+  it('默认衣橱数据包含新字段的合理默认值', () => {
+    for (const item of defaultClothing) {
+      expect(item.pattern).toBeTruthy();
+      expect(item.material).toBeTruthy();
+      expect(item.fit).toBeTruthy();
+      expect(item.length).toBeTruthy();
+      expect(item.thickness).toBeGreaterThanOrEqual(1);
+      expect(item.colorProfile.mainColor).toBeTruthy();
+    }
+  });
+
   it('异常历史数据被清洗后不会让推荐崩溃', () => {
     const bad = [null, 42, {}, { items: [{}] }, { items: [{ id: 's', name: '鞋', category: 'shoes', color: 'white' }], input: null }];
     const clean = normalizeHistory(bad);

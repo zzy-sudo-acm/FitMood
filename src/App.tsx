@@ -24,6 +24,7 @@ import {
   saveTheme,
   ThemeMode,
 } from './lib/storage';
+import { deleteClothingImage } from './lib/imageStore';
 import { ClothingItem, Feedback, OutfitHistory, OutfitInput, OutfitItemRef, Settings, TabKey } from './types';
 
 const THEME_COLORS: Record<ThemeMode, string> = { day: '#f7efe7', night: '#211b22' };
@@ -71,12 +72,23 @@ export default function App() {
     saveClothing(next);
   };
 
-  const saveClothingItem = (item: ClothingItem) => {
-    const exists = clothes.some((c) => c.id === item.id);
-    persistClothes(exists ? clothes.map((c) => (c.id === item.id ? item : c)) : [item, ...clothes]);
+  const deleteImagesFor = async (items: ClothingItem[]) => {
+    const ids = Array.from(new Set(items.map((item) => item.imageId).filter((id): id is string => Boolean(id))));
+    await Promise.all(ids.map((id) => deleteClothingImage(id)));
   };
 
-  const deleteClothingItem = (id: string) => persistClothes(clothes.filter((c) => c.id !== id));
+  const saveClothingItem = async (item: ClothingItem) => {
+    const exists = clothes.some((c) => c.id === item.id);
+    persistClothes(exists ? clothes.map((c) => (c.id === item.id ? item : c)) : [item, ...clothes]);
+    const previous = clothes.find((c) => c.id === item.id);
+    if (previous?.imageId && previous.imageId !== item.imageId) await deleteClothingImage(previous.imageId);
+  };
+
+  const deleteClothingItem = async (id: string) => {
+    const item = clothes.find((c) => c.id === id);
+    persistClothes(clothes.filter((c) => c.id !== id));
+    if (item?.imageId) await deleteClothingImage(item.imageId);
+  };
 
   const toggleClean = (item: ClothingItem) =>
     persistClothes(clothes.map((c) => (c.id === item.id ? { ...c, isClean: !c.isClean, updatedAt: Date.now() } : c)));
@@ -94,8 +106,16 @@ export default function App() {
     saveHistory(next);
   };
 
-  const handleResetWardrobe = () => persistClothes(resetClothing());
-  const handleClearWardrobe = () => persistClothes(clearClothing());
+  const handleResetWardrobe = async () => {
+    const previous = clothes;
+    persistClothes(resetClothing());
+    await deleteImagesFor(previous);
+  };
+  const handleClearWardrobe = async () => {
+    const previous = clothes;
+    persistClothes(clearClothing());
+    await deleteImagesFor(previous);
+  };
   const handleClearHistory = () => {
     clearHistory();
     setHistory([]);

@@ -37,6 +37,32 @@ export type Activity = 'sitting' | 'normal' | 'walking';
 
 export type Rating = 1 | 2 | 3 | 4 | 5;
 
+export type Pattern = 'solid' | 'stripe' | 'check' | 'floral' | 'graphic' | 'dot' | 'other';
+
+export type Material =
+  | 'cotton'
+  | 'denim'
+  | 'knit'
+  | 'wool'
+  | 'chiffon'
+  | 'leather'
+  | 'linen'
+  | 'polyester'
+  | 'other';
+
+export type Fit = 'slim' | 'regular' | 'loose' | 'oversized';
+export type GarmentLength = 'cropped' | 'regular' | 'long';
+export type ColorTemperature = 'warm' | 'cool' | 'neutral';
+
+export interface ColorProfile {
+  mainColor: string;
+  secondaryColors: string[];
+  neutralLevel: Rating;
+  brightness: Rating;
+  saturation: Rating;
+  temperature: ColorTemperature;
+}
+
 export type Feedback =
   | 'like'
   | 'ok'
@@ -66,6 +92,15 @@ export interface ClothingItem {
   isClean: boolean;
   /** 其他实用标签 id（显瘦、遮肉、走路舒服…），见 utilityTagOptions。 */
   tags: string[];
+  imageId?: string;
+  imageThumb?: string;
+  imageAlt?: string;
+  pattern: Pattern;
+  material: Material;
+  fit: Fit;
+  length: GarmentLength;
+  thickness: Rating;
+  colorProfile: ColorProfile;
   lastWornAt?: number;
   createdAt: number;
   updatedAt: number;
@@ -109,13 +144,27 @@ export interface Settings {
 
 // ---- 推荐引擎 ----
 
+export interface OutfitBreakdownPart {
+  score: number;
+  reasons: string[];
+  warnings: string[];
+}
+
+export interface OutfitBreakdown {
+  color: OutfitBreakdownPart;
+  silhouette: OutfitBreakdownPart;
+  style: OutfitBreakdownPart;
+  occasion: OutfitBreakdownPart;
+  weather: OutfitBreakdownPart;
+}
+
 export interface ScoredOutfit {
   items: ClothingItem[];
   score: number;
   reasons: string[];
   warnings: string[];
-  /** 各维度得分，开发者模式展示。 */
-  breakdown: Record<string, number>;
+  /** 审美规则引擎各维度解释。 */
+  breakdown: OutfitBreakdown;
   /** 这套搭配的风格路线，如「清爽温柔」。 */
   styleLine: string;
 }
@@ -133,6 +182,7 @@ export interface OutfitRecommendation {
   items: ClothingItem[];
   score: number;
   copy: OutfitCopy;
+  breakdown: OutfitBreakdown;
   alternatives: { items: ClothingItem[]; note: string }[];
   /** 打分靠前的候选，开发者模式查看。 */
   scoredOutfits: ScoredOutfit[];

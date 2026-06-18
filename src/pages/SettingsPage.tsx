@@ -20,8 +20,8 @@ interface SettingsPageProps {
   onChangeSettings: (patch: Partial<Settings>) => void;
   onChangeTheme: (theme: ThemeMode) => void;
   onChangeDevMode: (devMode: boolean) => void;
-  onResetWardrobe: () => void;
-  onClearWardrobe: () => void;
+  onResetWardrobe: () => void | Promise<void>;
+  onClearWardrobe: () => void | Promise<void>;
   onClearHistory: () => void;
 }
 
@@ -40,15 +40,15 @@ export function SettingsPage({
 
   const notify = (text: string) => setMessage(text);
 
-  const resetWardrobe = () => {
+  const resetWardrobe = async () => {
     if (!window.confirm('恢复默认衣橱？现有单品会被默认列表覆盖，无法撤销。')) return;
-    onResetWardrobe();
+    await onResetWardrobe();
     notify('已恢复默认衣橱。');
   };
 
-  const clearWardrobe = () => {
+  const clearWardrobe = async () => {
     if (!window.confirm('清空衣橱？所有单品都会被删除，无法撤销。')) return;
-    onClearWardrobe();
+    await onClearWardrobe();
     notify('衣橱已清空。');
   };
 

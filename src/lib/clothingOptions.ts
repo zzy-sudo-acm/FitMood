@@ -4,8 +4,12 @@ import {
   Category,
   ColdTolerance,
   Feedback,
+  Fit,
+  GarmentLength,
+  Material,
   Mood,
   Occasion,
+  Pattern,
   RecommendPreference,
   Season,
   StyleTag,
@@ -120,6 +124,56 @@ export const utilityTagOptions: string[] = [
   'breathable',
   'longHem',
 ];
+
+// ---- 审美属性 ----
+export const patternLabels: Record<Pattern, string> = {
+  solid: '纯色',
+  stripe: '条纹',
+  check: '格纹',
+  floral: '碎花',
+  graphic: '图案',
+  dot: '波点',
+  other: '其他',
+};
+export const patternOptions: Pattern[] = ['solid', 'stripe', 'check', 'floral', 'graphic', 'dot', 'other'];
+
+export const materialLabels: Record<Material, string> = {
+  cotton: '棉质',
+  denim: '牛仔',
+  knit: '针织',
+  wool: '羊毛',
+  chiffon: '雪纺',
+  leather: '皮质',
+  linen: '亚麻',
+  polyester: '聚酯',
+  other: '其他',
+};
+export const materialOptions: Material[] = [
+  'cotton',
+  'denim',
+  'knit',
+  'wool',
+  'chiffon',
+  'leather',
+  'linen',
+  'polyester',
+  'other',
+];
+
+export const fitLabels: Record<Fit, string> = {
+  slim: '修身',
+  regular: '合身',
+  loose: '宽松',
+  oversized: '廓形',
+};
+export const fitOptions: Fit[] = ['slim', 'regular', 'loose', 'oversized'];
+
+export const lengthLabels: Record<GarmentLength, string> = {
+  cropped: '短款',
+  regular: '常规',
+  long: '长款',
+};
+export const lengthOptions: GarmentLength[] = ['cropped', 'regular', 'long'];
 
 // ---- 今日心情 ----
 export const moodLabels: Record<Mood, string> = {

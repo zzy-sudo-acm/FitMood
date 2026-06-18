@@ -14,18 +14,19 @@ import {
   TempFeel,
 } from '../types';
 import {
-  colorHarmonyScore,
-  formalityScore,
   moodPreferredStyles,
   moodPreferredTags,
-  occasionMeta,
-  proportionScore,
-  styleHarmonyScore,
-  upperLayers,
-  warmthFitScore,
   warmthIndex,
-  weatherFitScore,
 } from './outfitRules';
+import {
+  addToBreakdownPart,
+  breakdownReasons,
+  breakdownScore,
+  breakdownWarnings,
+  evaluateAestheticRules,
+} from './aestheticRules';
+import { isNeutralItem, isPatternedItem } from './colorTheory';
+import { occasionMeta } from './occasionRules';
 import { categoryLabels } from './clothingOptions';
 
 const dayMs = 24 * 60 * 60 * 1000;
@@ -56,14 +57,21 @@ const isUsable = (item: ClothingItem, input: OutfitInput): boolean => {
   // 面试：太辣妹 / 太休闲不进面试候选。
   if (input.occasion === 'interview') {
     if (item.styleTags.includes('hotgirl')) return false;
+    if (item.category === 'shoes' && item.formality <= 2) return false;
     if (Lz(item.category) && item.formality <= 1) return false;
+    if (Lz(item.category) && isPatternedItem(item)) return false;
   }
 
   // 运动：不舒服的鞋不进候选。
   if (input.occasion === 'sport' && item.category === 'shoes' && item.comfort <= 2) return false;
 
   // 大热天：厚外套不进候选（避免一上来就给你套棉服）。
-  if (input.tempFeel === 'hot' && item.category === 'outerwear' && item.warmth >= 4) return false;
+  if (
+    input.tempFeel === 'hot' &&
+    item.category === 'outerwear' &&
+    (item.warmth >= 4 || item.thickness >= 4 || item.material === 'knit' || item.material === 'wool')
+  )
+    return false;
 
   return true;
 };
@@ -134,77 +142,56 @@ const scoreOutfit = (
   history: OutfitHistory[],
   now: number
 ): ScoredOutfit => {
-  const reasons: string[] = [];
-  const warnings: string[] = [];
-  const breakdown: Record<string, number> = {};
+  const breakdown = evaluateAestheticRules(items, input, settings);
   const meta = occasionMeta[input.occasion];
 
-  const add = (key: string, value: number) => {
-    breakdown[key] = (breakdown[key] ?? 0) + value;
+  const add = (
+    key: keyof typeof breakdown,
+    value: number,
+    reasons: string[] = [],
+    warnings: string[] = []
+  ) => {
+    breakdown[key] = addToBreakdownPart(breakdown[key], value, reasons, warnings);
   };
 
-  // 天气 / 保暖
-  const warm = warmthFitScore(items, input.tempFeel, settings.coldTolerance);
-  add('warmth', warm.score);
-  reasons.push(...warm.reasons);
-  warnings.push(...warm.warnings);
-
-  const weather = weatherFitScore(items, input.weather);
-  add('weather', weather.score);
-  reasons.push(...weather.reasons);
-  warnings.push(...weather.warnings);
-
   // 热天叠太多层
-  if (input.tempFeel === 'hot' && upperLayers(items) >= 2) {
-    add('weather', -10);
-    warnings.push('热天层次有点多，单层会更舒服');
+  if (
+    input.tempFeel === 'hot' &&
+    items.filter((i) => i.category === 'top' || i.category === 'dress' || i.category === 'outerwear').length >= 2
+  ) {
+    add('weather', -10, [], ['热天层次有点多，单层会更舒服。']);
   }
 
-  // 场合：正式度 + 适配
-  const formal = formalityScore(items, input.occasion);
-  add('formality', formal.score);
-  warnings.push(...formal.warnings);
-
+  // 场合适配补充：是否明确标记适合今天场合。
   const occHits = items.filter((i) => i.suitableOccasions.includes(input.occasion)).length;
-  add('occasion', Math.min(12, occHits * 4));
-  if (occHits >= 2) reasons.push(`适合${occasionLabel(input.occasion)}`);
+  add(
+    'occasion',
+    Math.min(10, occHits * 3),
+    occHits >= 2 ? [`单品本身就适合${occasionLabel(input.occasion)}。`] : []
+  );
 
   const styleHits = items.filter((i) => i.styleTags.some((t) => meta.preferredStyles.includes(t as StyleTag))).length;
-  add('occasion', Math.min(8, styleHits * 3));
+  add('style', Math.min(6, styleHits * 2));
   const stylePenalty = items.filter((i) => i.styleTags.some((t) => meta.penalizedStyles.includes(t as StyleTag))).length;
   if (stylePenalty) {
-    add('occasion', -stylePenalty * 6);
-    warnings.push(`风格不太贴合${occasionLabel(input.occasion)}`);
+    add('occasion', -stylePenalty * 5, [], [`风格不太贴合${occasionLabel(input.occasion)}。`]);
   }
-
-  // 风格统一 + 色彩 + 比例
-  const style = styleHarmonyScore(items);
-  add('style', style.score);
-  reasons.push(...style.reasons);
-  warnings.push(...style.warnings);
-
-  const color = colorHarmonyScore(items);
-  add('color', color.score);
-  reasons.push(...color.reasons);
-  warnings.push(...color.warnings);
-
-  const proportion = proportionScore(items);
-  add('proportion', proportion.score);
-  reasons.push(...proportion.reasons);
 
   // 舒适度（含行动强度）
   const comfortAvg = avg(items.map((i) => i.comfort));
-  add('comfort', Math.round((comfortAvg - 3) * 4 * meta.comfortWeight));
+  add(
+    'weather',
+    Math.round((comfortAvg - 3) * 4 * meta.comfortWeight),
+    comfortAvg >= 4 ? ['整体舒适度不错，穿一天压力不大。'] : []
+  );
   const shoes = items.find((i) => i.category === 'shoes');
   if (input.activity === 'walking') {
     if (shoes && shoes.comfort <= 2) {
-      add('comfort', -14);
-      warnings.push('今天走得多，这双鞋可能会累脚');
+      add('weather', -14, [], ['今天走得多，这双鞋可能会累脚。']);
     } else if (shoes && (shoes.comfort >= 4 || shoes.tags.includes('walkComfy'))) {
-      add('comfort', 8);
-      reasons.push('鞋子走路友好');
+      add('weather', 8, ['鞋子走路友好。']);
     }
-    if (comfortAvg >= 4) reasons.push('整体好活动');
+    if (comfortAvg >= 4) add('weather', 3, ['整体好活动。']);
   }
 
   // 心情
@@ -212,12 +199,14 @@ const scoreOutfit = (
   const moodTags = uniq(input.moods.flatMap((m) => moodPreferredTags[m]));
   const moodStyleHits = items.filter((i) => i.styleTags.some((t) => moodStyles.includes(t as StyleTag))).length;
   const moodTagHits = items.filter((i) => i.tags.some((t) => moodTags.includes(t))).length;
-  add('mood', Math.min(12, moodStyleHits * 4 + moodTagHits * 3));
-  if (input.moods.includes('slim') && items.some((i) => i.tags.includes('slimming'))) reasons.push('有显瘦单品，照顾到你想显瘦');
-  if (input.moods.includes('comfy') && comfortAvg >= 4) reasons.push('主打一个舒服');
+  add('style', Math.min(12, moodStyleHits * 4 + moodTagHits * 3));
+  if (input.moods.includes('slim') && items.some((i) => i.tags.includes('slimming'))) {
+    add('silhouette', 5, ['有显瘦单品，照顾到你想显瘦。']);
+  }
+  if (input.moods.includes('comfy') && comfortAvg >= 4) add('weather', 5, ['主打一个舒服。']);
 
   // 百搭稳定
-  add('versatility', Math.round((avg(items.map((i) => i.versatility)) - 3) * 3));
+  add('occasion', Math.round((avg(items.map((i) => i.versatility)) - 3) * 3));
 
   // 亮点 / 精致（约会、拍照、想精致/想拍照）
   const wantHighlight =
@@ -227,16 +216,14 @@ const scoreOutfit = (
       (i) => i.tags.includes('photoFriendly') || (i.category !== 'shoes' && !isNeutralLike(i))
     );
     if (hasHighlight) {
-      add('highlight', 8);
-      reasons.push('有个上镜的亮点');
+      add('style', 8, ['有个上镜的亮点。']);
     } else {
-      add('highlight', -4);
-      warnings.push('整体偏素，想出片可以加个亮色或配饰');
+      add('style', -4, [], ['整体偏素，想出片可以加个亮色或配饰。']);
     }
   }
 
   // 偏好加权
-  applyPreference(settings, breakdown, items, comfortAvg, reasons);
+  applyPreference(settings, breakdown, comfortAvg);
 
   // 最近穿过 → 短期降权
   const recent3 = recentlyWornIds(history, now, 3);
@@ -244,52 +231,52 @@ const scoreOutfit = (
   const wornVeryRecent = items.filter((i) => recent3.has(i.id) || (i.lastWornAt && (now - i.lastWornAt) / dayMs <= 2)).length;
   const wornRecent = items.filter((i) => recent7.has(i.id)).length;
   if (wornVeryRecent) {
-    add('recency', -8 * wornVeryRecent);
-    warnings.push('其中有刚穿过的，换换花样也行');
+    add('occasion', -8 * wornVeryRecent, [], ['其中有刚穿过的，换换花样也行。']);
   } else if (wornRecent) {
-    add('recency', -3 * wornRecent);
+    add('occasion', -3 * wornRecent);
   }
 
   // 历史反馈
   const fb = sum(items.map((i) => itemFeedbackScore(history, i.id, now)));
-  add('feedback', Math.max(-24, Math.min(20, fb)));
-  if (fb >= 8) reasons.push('这几件你以前评价不错');
+  const feedbackScore = Math.max(-24, Math.min(20, fb));
+  if (feedbackScore >= 8) add('style', feedbackScore, ['这几件你以前评价不错。']);
+  else if (feedbackScore < 0) add('style', feedbackScore, [], ['这套里有你之前踩雷过的单品，先降权。']);
 
-  const total = Math.round(sum(Object.values(breakdown)));
+  const total = breakdownScore(breakdown);
   return {
     items,
     score: total,
-    reasons: uniq(reasons),
-    warnings: uniq(warnings),
+    reasons: breakdownReasons(breakdown),
+    warnings: breakdownWarnings(breakdown),
     breakdown,
     styleLine: styleLineFor(items, input),
   };
 };
 
 const isNeutralLike = (item: ClothingItem) => {
-  // 引擎里轻量判断：用 outfitRules 的色彩信息。
-  return ['white', 'black', 'gray', 'beige', 'brown', 'denim', 'navy', 'khaki'].includes(item.color);
+  return isNeutralItem(item);
 };
 
 const applyPreference = (
   settings: Settings,
-  breakdown: Record<string, number>,
-  items: ClothingItem[],
-  comfortAvg: number,
-  reasons: string[]
+  breakdown: ScoredOutfit['breakdown'],
+  comfortAvg: number
 ) => {
   const pref = settings.recommendPreference;
   if (pref === 'comfy') {
-    breakdown.comfort = (breakdown.comfort ?? 0) + Math.round((comfortAvg - 3) * 4);
-    if (comfortAvg >= 4) reasons.push('按你「舒服优先」挑的');
+    breakdown.weather = addToBreakdownPart(
+      breakdown.weather,
+      Math.round((comfortAvg - 3) * 4),
+      comfortAvg >= 4 ? ['按你「舒服优先」挑的。'] : []
+    );
   } else if (pref === 'pretty') {
-    breakdown.style = (breakdown.style ?? 0) * 1.3;
-    breakdown.color = (breakdown.color ?? 0) * 1.2;
+    breakdown.style = addToBreakdownPart(breakdown.style, Math.round(breakdown.style.score * 0.25));
+    breakdown.color = addToBreakdownPart(breakdown.color, Math.round(breakdown.color.score * 0.15));
   } else if (pref === 'safe') {
-    breakdown.versatility = (breakdown.versatility ?? 0) + 6;
-    breakdown.color = (breakdown.color ?? 0) + 4;
+    breakdown.occasion = addToBreakdownPart(breakdown.occasion, 6);
+    breakdown.color = addToBreakdownPart(breakdown.color, 4, ['按你「不出错优先」加了一点稳定度。']);
   } else if (pref === 'photo') {
-    breakdown.highlight = (breakdown.highlight ?? 0) * 1.5 + 4;
+    breakdown.style = addToBreakdownPart(breakdown.style, 6, ['按你「拍照优先」保留一点造型亮点。']);
   }
 };
 
@@ -389,7 +376,9 @@ const buildCopy = (main: ScoredOutfit, input: OutfitInput): OutfitRecommendation
   const title = `今日推荐 · ${styleLine}`;
 
   const reasonBits = main.reasons.slice(0, 3);
-  const reasonTail = reasonBits.length ? `${reasonBits.join('，')}。` : '整体好搭不费脑。';
+  const reasonTail = reasonBits.length
+    ? `${reasonBits.map((text) => text.replace(/[。！？]$/, '')).join('，')}。`
+    : '整体好搭不费脑。';
   const reason = `今天走${styleLine}路线：${names}。${reasonTail}`;
 
   const warnings = main.warnings.slice(0, 2);
@@ -521,6 +510,7 @@ export const recommendOutfit = (
     items: main.items,
     score: main.score,
     copy: buildCopy(main, input),
+    breakdown: main.breakdown,
     alternatives,
     scoredOutfits: allVariants.slice(0, 8),
   };

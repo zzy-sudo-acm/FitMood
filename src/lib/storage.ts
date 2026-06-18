@@ -4,9 +4,14 @@ import {
   Category,
   ClothingItem,
   ColdTolerance,
+  ColorProfile,
   Feedback,
+  Fit,
+  GarmentLength,
+  Material,
   Mood,
   Occasion,
+  Pattern,
   OutfitHistory,
   OutfitInput,
   OutfitItemRef,
@@ -18,6 +23,7 @@ import {
   TempFeel,
   Weather,
 } from '../types';
+import { getColor } from './clothingOptions';
 
 const CLOTHING_KEY = 'fitmood.clothing.v1';
 const HISTORY_KEY = 'fitmood.history.v1';
@@ -70,6 +76,20 @@ const tempFeelValues: TempFeel[] = ['cold', 'cool', 'comfortable', 'hot'];
 const weatherValues: Weather[] = ['sunny', 'cloudy', 'rainy', 'windy'];
 const activityValues: Activity[] = ['sitting', 'normal', 'walking'];
 const moodValues: Mood[] = ['comfy', 'slim', 'gentle', 'cool', 'easy', 'delicate', 'lowkey', 'photogenic'];
+const patternValues: Pattern[] = ['solid', 'stripe', 'check', 'floral', 'graphic', 'dot', 'other'];
+const materialValues: Material[] = [
+  'cotton',
+  'denim',
+  'knit',
+  'wool',
+  'chiffon',
+  'leather',
+  'linen',
+  'polyester',
+  'other',
+];
+const fitValues: Fit[] = ['slim', 'regular', 'loose', 'oversized'];
+const lengthValues: GarmentLength[] = ['cropped', 'regular', 'long'];
 const feedbackValues: Feedback[] = [
   'like',
   'ok',
@@ -115,16 +135,117 @@ const stringArray = (value: unknown): string[] =>
 
 type ClothingDraft = Partial<ClothingItem>;
 
+const clampString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() ? value.trim() : undefined;
+
+export const defaultColorProfile = (colorId: string): ColorProfile => {
+  const color = getColor(colorId);
+  const warm = ['warm', 'purple'].includes(color.family);
+  const cool = color.family === 'cool' || color.id === 'denim' || color.id === 'navy';
+  const brightness: Record<string, Rating> = {
+    white: 5,
+    beige: 4,
+    yellow: 5,
+    pink: 4,
+    mint: 4,
+    skyblue: 4,
+    lavender: 4,
+    gray: 3,
+    denim: 3,
+    khaki: 3,
+    brown: 2,
+    navy: 2,
+    black: 1,
+  };
+  const saturation: Record<string, Rating> = {
+    white: 1,
+    black: 1,
+    gray: 1,
+    beige: 1,
+    brown: 2,
+    denim: 2,
+    navy: 2,
+    khaki: 2,
+    rose: 4,
+    red: 5,
+    coral: 4,
+    yellow: 4,
+    blue: 4,
+    purple: 4,
+    multi: 5,
+  };
+  return {
+    mainColor: color.id,
+    secondaryColors: color.pattern ? ['white', 'pink'] : [],
+    neutralLevel: (color.neutral ? 5 : color.family === 'pattern' ? 1 : 2) as Rating,
+    brightness: brightness[color.id] ?? 3,
+    saturation: saturation[color.id] ?? (color.neutral ? 1 : 3),
+    temperature: color.neutral ? 'neutral' : warm ? 'warm' : cool ? 'cool' : 'neutral',
+  };
+};
+
+const normalizeColorProfile = (value: unknown, colorId: string): ColorProfile => {
+  const fallback = defaultColorProfile(colorId);
+  if (!value || typeof value !== 'object') return fallback;
+  const raw = value as Partial<ColorProfile>;
+  const temperature =
+    raw.temperature === 'warm' || raw.temperature === 'cool' || raw.temperature === 'neutral'
+      ? raw.temperature
+      : fallback.temperature;
+  return {
+    mainColor: typeof raw.mainColor === 'string' && raw.mainColor ? raw.mainColor : fallback.mainColor,
+    secondaryColors: stringArray(raw.secondaryColors).slice(0, 3),
+    neutralLevel: clampRating(raw.neutralLevel, fallback.neutralLevel),
+    brightness: clampRating(raw.brightness, fallback.brightness),
+    saturation: clampRating(raw.saturation, fallback.saturation),
+    temperature,
+  };
+};
+
+const defaultPatternFor = (item: ClothingDraft): Pattern => {
+  if (inEnum(item.pattern, patternValues)) return item.pattern;
+  const color = typeof item.color === 'string' ? getColor(item.color) : getColor('white');
+  if (color.pattern) return item.category === 'dress' ? 'floral' : 'graphic';
+  return 'solid';
+};
+
+const defaultMaterialFor = (item: ClothingDraft): Material => {
+  if (inEnum(item.material, materialValues)) return item.material;
+  if (item.color === 'denim') return 'denim';
+  if (item.tags?.includes('breathable')) return 'cotton';
+  if (item.name?.includes('针织')) return 'knit';
+  if (item.name?.includes('大衣')) return 'wool';
+  if (item.category === 'shoes' || item.category === 'bag') return 'leather';
+  return 'cotton';
+};
+
+const defaultFitFor = (item: ClothingDraft): Fit => {
+  if (inEnum(item.fit, fitValues)) return item.fit;
+  if (item.name?.includes('卫衣')) return 'loose';
+  if (item.tags?.includes('slimming')) return 'slim';
+  if (item.category === 'outerwear') return 'regular';
+  return 'regular';
+};
+
+const defaultLengthFor = (item: ClothingDraft): GarmentLength => {
+  if (inEnum(item.length, lengthValues)) return item.length;
+  if (item.tags?.includes('longHem') || item.name?.includes('大衣')) return 'long';
+  if (item.name?.includes('短')) return 'cropped';
+  return 'regular';
+};
+
 export const normalizeClothing = (item: ClothingDraft): ClothingItem => {
   const createdAt =
     typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) ? item.createdAt : Date.now();
   const updatedAt =
     typeof item.updatedAt === 'number' && Number.isFinite(item.updatedAt) ? item.updatedAt : createdAt;
+  const color = typeof item.color === 'string' && item.color ? item.color : 'white';
+  const pattern = defaultPatternFor(item);
   return {
     id: typeof item.id === 'string' && item.id ? item.id : makeId('cloth'),
     name: typeof item.name === 'string' && item.name.trim() ? item.name.trim() : '未命名单品',
     category: inEnum(item.category, categoryValues) ? item.category : 'top',
-    color: typeof item.color === 'string' && item.color ? item.color : 'white',
+    color,
     styleTags: filterEnum<StyleTag>(item.styleTags, styleTagValues),
     warmth: clampRating(item.warmth, 3),
     comfort: clampRating(item.comfort, 3),
@@ -134,6 +255,15 @@ export const normalizeClothing = (item: ClothingDraft): ClothingItem => {
     suitableOccasions: filterEnum<Occasion>(item.suitableOccasions, occasionValues),
     isClean: typeof item.isClean === 'boolean' ? item.isClean : true,
     tags: stringArray(item.tags),
+    imageId: clampString(item.imageId),
+    imageThumb: clampString(item.imageThumb),
+    imageAlt: clampString(item.imageAlt) ?? (typeof item.name === 'string' ? item.name.trim() : undefined),
+    pattern,
+    material: defaultMaterialFor(item),
+    fit: defaultFitFor(item),
+    length: defaultLengthFor(item),
+    thickness: clampRating(item.thickness, clampRating(item.warmth, 3)),
+    colorProfile: normalizeColorProfile(item.colorProfile, color),
     lastWornAt:
       typeof item.lastWornAt === 'number' && Number.isFinite(item.lastWornAt) ? item.lastWornAt : undefined,
     createdAt,

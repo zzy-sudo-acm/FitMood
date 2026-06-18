@@ -7,8 +7,8 @@ import { categoryLabels, categoryOptions, styleTagLabel, utilityTagLabel } from 
 
 interface WardrobePageProps {
   clothes: ClothingItem[];
-  onSave: (item: ClothingItem) => void;
-  onDelete: (id: string) => void;
+  onSave: (item: ClothingItem) => void | Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
   onToggleClean: (item: ClothingItem) => void;
 }
 
@@ -40,17 +40,17 @@ export function WardrobePage({ clothes, onSave, onDelete, onToggleClean }: Wardr
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSave = (item: ClothingItem) => {
-    onSave(item);
+  const handleSave = async (item: ClothingItem) => {
+    await onSave(item);
     setEditing(undefined);
     setShowForm(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const item = clothes.find((c) => c.id === id);
     if (!item) return;
     if (!window.confirm(`从衣橱里删掉「${item.name}」？`)) return;
-    onDelete(id);
+    await onDelete(id);
   };
 
   const filters: FilterKey[] = ['all', ...categoryOptions];

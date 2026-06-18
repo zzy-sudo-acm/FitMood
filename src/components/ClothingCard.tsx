@@ -1,6 +1,7 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { ClothingItem } from '../types';
-import { categoryLabels, colorHex, colorLabel, getColor, styleTagLabel, utilityTagLabel } from '../lib/clothingOptions';
+import { categoryLabels, colorLabel, styleTagLabel, utilityTagLabel } from '../lib/clothingOptions';
+import { ClothingVisual } from './ClothingVisual';
 
 interface ClothingCardProps {
   item: ClothingItem;
@@ -10,16 +11,11 @@ interface ClothingCardProps {
 }
 
 export function ClothingCard({ item, onEdit, onDelete, onToggleClean }: ClothingCardProps) {
-  const isPattern = getColor(item.color).pattern;
   const chips = [...item.styleTags.map(styleTagLabel), ...item.tags.map(utilityTagLabel)].slice(0, 4);
 
   return (
     <article className={`clothing-card ${item.isClean ? '' : 'is-dirty'}`}>
-      <span
-        className={`clothing-card__swatch ${isPattern ? 'is-pattern' : ''}`}
-        style={{ background: colorHex(item.color) }}
-        aria-hidden="true"
-      />
+      <ClothingVisual item={item} className="clothing-card__visual" />
       <div className="clothing-card__body">
         <div className="clothing-card__head">
           <h3>{item.name}</h3>
